@@ -1,0 +1,89 @@
+import type { FC } from 'react';
+import type { IResp } from '../types';
+import { LockOutlined, UserOutlined } from '@ant-design/icons';
+import { Button, Form, Input } from 'antd';
+import React, { useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useSWRConfig } from 'swr';
+/* https://www.tbs.co.jp/anime/adashima/ */
+import loginBackground from '../assets/img/bg_howatama.png';
+
+/* https://unsplash.com/photos/McsNra2VRQQ */
+import cherry from '../assets/img/cherry.jpg';
+import api from '../lib/api';
+
+import { notify } from '../utils';
+
+const Login: FC = () => {
+  const navigate = useNavigate();
+  const { mutate } = useSWRConfig();
+
+  const onFinish = useCallback(async (values: { username: string; password: string }) => {
+    const { username, password } = values;
+    const data = await api.post<IResp<string>>('/api/admin/session', { json: { username, password } }).json<IResp<string>>();
+    if (!data.code) {
+      notify('成功', undefined, 'success');
+      localStorage.setItem('token', data.data);
+      await mutate('/api/admin/session', {
+        code: 0,
+        msg: 'OK',
+        data: null,
+      }, { revalidate: false });
+      navigate('/dashboard');
+    }
+  }, [navigate, mutate]);
+
+  return (
+    <div
+      className="flex items-center min-h-screen p-6 bg-violet-50"
+      style={{ backgroundImage: `url(${loginBackground})` }}
+    >
+      <div className="flex-1 h-full max-w-xl md:max-w-4xl mx-auto overflow-hidden bg-white rounded-lg shadow-xl">
+        <div className="flex flex-col md:flex-row">
+          <div className="h-60 md:h-auto md:w-1/2">
+            <img
+              aria-hidden="true"
+              className="object-cover w-full h-full"
+              src={cherry}
+              alt="登录背景"
+            />
+          </div>
+          <div className="flex flex-col items-center justify-center p-6 sm:p-16 md:w-1/2">
+            <h1 className="text-2xl font-semibold text-gray-700 mb-6">NodeStatus</h1>
+            <Form
+              className="w-full"
+              initialValues={{ remember: true }}
+              onFinish={onFinish}
+            >
+              <Form.Item
+                name="username"
+                rules={[{ required: true, message: '请输入用户名' }]}
+              >
+                <Input size="large" prefix={<UserOutlined />} placeholder="用户名" />
+              </Form.Item>
+              <Form.Item
+                name="password"
+                rules={[{ required: true, message: '请输入密码' }]}
+              >
+                <Input
+                  size="large"
+                  prefix={<LockOutlined />}
+                  type="password"
+                  placeholder="密码"
+                />
+              </Form.Item>
+
+              <Form.Item>
+                <Button type="primary" size="large" htmlType="submit" block>
+                  登录
+                </Button>
+              </Form.Item>
+            </Form>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Login;
