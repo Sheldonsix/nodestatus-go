@@ -54,7 +54,7 @@ sh /tmp/nodestatus-client-install.sh --dsn 'wss://node:password@example.com'
 
 ### GitHub Actions
 - `CI`：测试服务端和客户端，可手动触发。
-- `Docker Release`：构建并推送 `ghcr.io/<owner>/<repo>` 镜像，支持 `v*` tag 或手动触发。
+- `Docker Release`：构建并推送 `ghcr.io/<owner>/<repo>` 和 `DOCKERHUB_USERNAME/nodestatus-go` 镜像，支持 `v*` tag 或手动触发。需要先配置仓库 secrets：`DOCKERHUB_USERNAME`、`DOCKERHUB_TOKEN`。
 - `Client Go Release`：构建 Linux/OpenWrt 客户端压缩包，支持 `v*` tag 或手动触发。
 
 ## ⚙️ 运行与配置

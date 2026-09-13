@@ -54,7 +54,7 @@ sh /tmp/nodestatus-client-install.sh --dsn 'wss://node:password@example.com'
 
 ### GitHub Actions
 - `CI`: tests server and client; can be run manually.
-- `Docker Release`: builds and pushes `ghcr.io/<owner>/<repo>`; runs on `v*` tags or manually.
+- `Docker Release`: builds and pushes `ghcr.io/<owner>/<repo>` and `DOCKERHUB_USERNAME/nodestatus-go`; runs on `v*` tags or manually. Set `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` repository secrets first.
 - `Client Go Release`: builds Linux/OpenWrt client archives; runs on `v*` tags or manually.
 
 ## ⚙️ Configuration & Run
