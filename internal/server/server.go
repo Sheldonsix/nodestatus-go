@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"os"
-	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -25,7 +23,6 @@ type Config struct {
 	WebTitle     string
 	WebSubtitle  string
 	WebHeadtitle string
-	AdminDir     string
 }
 
 type Server struct {
@@ -64,12 +61,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{"servers": s.hub.ServersPub(), "updated": time.Now().Unix()})
 	case strings.HasPrefix(r.URL.Path, "/api/server/") && strings.HasSuffix(r.URL.Path, "/history"):
 		s.handleHistory(w, r)
-	case r.URL.Path == "/admin":
-		http.Redirect(w, r, "/admin/", http.StatusFound)
-	case strings.HasPrefix(r.URL.Path, "/admin/"):
-		s.serveAdmin(w, r)
 	case r.URL.Path == "/":
-		w.Write([]byte("NodeStatus Go. Open /admin/\n"))
+		w.Write([]byte("NodeStatus Go API\n"))
 	default:
 		http.NotFound(w, r)
 	}
@@ -261,33 +254,6 @@ func (s *Server) handleHistory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, ok(data, "ok"))
-}
-
-func (s *Server) serveAdmin(w http.ResponseWriter, r *http.Request) {
-	root := filepath.Clean(s.cfg.AdminDir)
-	if root == "" {
-		http.NotFound(w, r)
-		return
-	}
-	rel := strings.TrimPrefix(r.URL.Path, "/admin/")
-	if rel == "" {
-		rel = "index.html"
-	}
-	name := filepath.Clean(filepath.Join(root, rel))
-	if !strings.HasPrefix(name, root) {
-		http.NotFound(w, r)
-		return
-	}
-	if st, err := os.Stat(name); err == nil && !st.IsDir() {
-		http.ServeFile(w, r, name)
-		return
-	}
-	index := filepath.Join(root, "index.html")
-	if _, err := os.Stat(index); err == nil {
-		http.ServeFile(w, r, index)
-		return
-	}
-	http.NotFound(w, r)
 }
 
 func (s *Server) authorized(r *http.Request) bool {

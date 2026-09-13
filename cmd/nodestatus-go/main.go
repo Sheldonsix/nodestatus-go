@@ -24,7 +24,6 @@ func main() {
 	pingInterval := flag.Int("ping-interval", envInt("PING_INTERVAL", 30), "websocket ping interval in seconds")
 	reconnectTimeout := flag.Int("reconnect-timeout", envInt("RECONNECT_TIMEOUT", envInt("PUSH_TIMEOUT", 120)), "disconnect event delay in seconds")
 	database := flag.String("database", envString("DATABASE", defaultDatabase()), "SQLite database path or file: URL")
-	adminDir := flag.String("admin-dir", envString("ADMIN_DIR", filepath.Join("web", "hotaru-admin", "dist")), "built hotaru-admin dist directory")
 	webUsername := flag.String("web-username", envString("WEB_USERNAME", "admin"), "admin username")
 	webPassword := flag.String("web-password", envString("WEB_PASSWORD", ""), "admin password")
 	webSecret := flag.String("web-secret", envString("WEB_SECRET", "node-secret"), "JWT secret")
@@ -56,7 +55,6 @@ func main() {
 	handler := server.New(st, hub, server.Config{
 		WebUsername: *webUsername, WebPassword: *webPassword, WebSecret: *webSecret,
 		WebTitle: *webTitle, WebSubtitle: *webSubtitle, WebHeadtitle: *webHeadtitle,
-		AdminDir: *adminDir,
 	})
 	addr := ":" + strconv.Itoa(*port)
 	log.Printf("NodeStatus Go listening on http://127.0.0.1%s", addr)

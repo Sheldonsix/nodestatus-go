@@ -5,40 +5,29 @@
 A minimal, high-performance Go backend for the [NodeStatus](https://github.com/nodestatus/nodestatus) server.
 
 ## 📖 Introduction
-NodeStatus Go provides a lightweight and fast alternative to the original Node.js backend. It focuses on core functionality, utilizing SQLite for data storage, and serves the `hotaru-admin` frontend out of the box. 
+NodeStatus Go provides a lightweight and fast alternative to the original Node.js backend. It focuses on the backend API, uses SQLite for data storage, and is intended to be managed by an external dashboard such as NezhaDash.
 
 ## ✨ Features
 - **Lightweight & Fast**: Built with Go for optimal performance and low memory footprint.
 - **SQLite Database**: Uses SQLite for easy setup and management. Reuses existing tables from the Node.js version (`servers`, `options`, `events`, `server_histories`).
-- **Core APIs Supported**: 
-  - Admin API (compatible with `hotaru-admin`)
+- **Core APIs Supported**:
+  - Admin API for external dashboards
   - Agent `/connect` WebSocket
   - Public `/public` WebSocket
   - Status, history, and event endpoints.
-- **Seamless Admin UI**: Integrates directly with the `hotaru-admin` frontend.
 
-*Note: This minimal version currently does not include Telegram push, IPC, MySQL/Postgres support, or legacy public themes.*
+*Note: This minimal version currently does not include a bundled admin UI, Telegram push, IPC, MySQL/Postgres support, or legacy public themes.*
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 - [Go](https://go.dev/) 1.24+
-- [Node.js](https://nodejs.org/) & [pnpm](https://pnpm.io/) (for building the admin UI)
 
 ### Build the Backend
 ```sh
 cd nodestatus-go
 go build -o nodestatus-go ./cmd/nodestatus-go
 ```
-
-### Build the Admin UI
-The Go server requires the `hotaru-admin` frontend files to serve the admin interface.
-```sh
-cd nodestatus-go
-pnpm install
-pnpm --filter hotaru-admin build
-```
-*By default, the Go server serves the `/admin/` path from `web/hotaru-admin/dist`. If your build files are located elsewhere, specify the directory using the `--admin-dir` flag or the `ADMIN_DIR` environment variable.*
 
 ## ⚙️ Configuration & Run
 
@@ -63,7 +52,7 @@ WEB_PASSWORD=your-secure-password go run ./cmd/nodestatus-go
 | `RECONNECT_TIMEOUT`| `120` | Agent reconnect timeout in seconds. |
 
 ## 🔌 API Endpoints
-The following core endpoints are supported. Admin API responses maintain the `{ code, msg, data }` structure used by `hotaru-admin`.
+The following core endpoints are supported. Admin API responses maintain the `{ code, msg, data }` structure used by compatible dashboards.
 
 - `POST /api/admin/session` - Admin authentication
 - `GET/PUT /api/admin/servers` - Server management
