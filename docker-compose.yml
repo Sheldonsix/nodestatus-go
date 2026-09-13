@@ -1,0 +1,23 @@
+services:
+  nodestatus:
+    build: .
+    image: ${IMAGE:-ghcr.io/sheldonsix/nodestatus-go:latest}
+    container_name: nodestatus-go
+    restart: unless-stopped
+    environment:
+      PORT: ${PORT:-35601}
+      DATABASE: /data/db.sqlite
+      WEB_USERNAME: ${WEB_USERNAME:-admin}
+      WEB_PASSWORD: ${WEB_PASSWORD:?set WEB_PASSWORD in .env}
+      WEB_SECRET: ${WEB_SECRET:-node-secret}
+      WEB_TITLE: ${WEB_TITLE:-Server Status}
+      WEB_SUBTITLE: ${WEB_SUBTITLE:-Servers' Probes Set up with NodeStatus}
+      WEB_HEADTITLE: ${WEB_HEADTITLE:-NodeStatus}
+      INTERVAL: ${INTERVAL:-1500}
+      PING_INTERVAL: ${PING_INTERVAL:-30}
+      RECONNECT_TIMEOUT: ${RECONNECT_TIMEOUT:-120}
+      TZ: ${TZ:-Asia/Shanghai}
+    volumes:
+      - ./data:/data
+    ports:
+      - "${BIND:-127.0.0.1:35601:35601}"

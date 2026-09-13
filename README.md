@@ -29,6 +29,34 @@ cd nodestatus-go
 go build -o nodestatus-go ./cmd/nodestatus-go
 ```
 
+### Docker Deploy
+```sh
+cp .env.example .env
+vim .env
+docker compose up -d --build
+```
+
+One-line install on a host with Docker and Git:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/Sheldonsix/nodestatus-go/main/scripts/install.sh | sh
+```
+
+The installer clones the repo to `/opt/nodestatus-go` when it is not run from a local checkout, writes `.env`, and starts `docker compose up -d --build`.
+
+### Client Agent
+`client-go` lives in `client-go/` as a separate Go module. Release assets are installed with:
+
+```sh
+wget -O /tmp/nodestatus-client-install.sh https://raw.githubusercontent.com/Sheldonsix/nodestatus-go/main/scripts/install-client-go.sh
+sh /tmp/nodestatus-client-install.sh --dsn 'wss://node:password@example.com'
+```
+
+### GitHub Actions
+- `CI`: tests server and client; can be run manually.
+- `Docker Release`: builds and pushes `ghcr.io/<owner>/<repo>`; runs on `v*` tags or manually.
+- `Client Go Release`: builds Linux/OpenWrt client archives; runs on `v*` tags or manually.
+
 ## ⚙️ Configuration & Run
 
 You can run the server using environment variables to configure its behavior. The defaults are designed to match the Node.js server where practical.

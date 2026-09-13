@@ -29,6 +29,34 @@ cd nodestatus-go
 go build -o nodestatus-go ./cmd/nodestatus-go
 ```
 
+### Docker 部署
+```sh
+cp .env.example .env
+vim .env
+docker compose up -d --build
+```
+
+已安装 Docker 和 Git 的主机可以一键部署：
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/Sheldonsix/nodestatus-go/main/scripts/install.sh | sh
+```
+
+安装脚本在非本地仓库目录执行时会克隆到 `/opt/nodestatus-go`，写入 `.env`，然后执行 `docker compose up -d --build`。
+
+### 客户端探针
+`client-go` 位于 `client-go/`，作为独立 Go module 保留。Release 二进制可通过脚本安装：
+
+```sh
+wget -O /tmp/nodestatus-client-install.sh https://raw.githubusercontent.com/Sheldonsix/nodestatus-go/main/scripts/install-client-go.sh
+sh /tmp/nodestatus-client-install.sh --dsn 'wss://node:password@example.com'
+```
+
+### GitHub Actions
+- `CI`：测试服务端和客户端，可手动触发。
+- `Docker Release`：构建并推送 `ghcr.io/<owner>/<repo>` 镜像，支持 `v*` tag 或手动触发。
+- `Client Go Release`：构建 Linux/OpenWrt 客户端压缩包，支持 `v*` tag 或手动触发。
+
 ## ⚙️ 运行与配置
 
 你可以通过环境变量来配置服务的运行参数。默认配置已尽量与原 Node 版本保持一致。

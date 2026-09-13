@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches-ignore:
+      - "renovate/**"
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: go test ./...
+
+  client:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: client-go/go.mod
+          cache-dependency-path: client-go/go.sum
+      - run: go test ./...
+        working-directory: client-go

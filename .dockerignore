@@ -1,0 +1,7 @@
+.git
+.github
+client-go
+data
+dist
+*.sqlite
+nodestatus-go
