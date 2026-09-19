@@ -20,29 +20,23 @@ NodeStatus Go provides a lightweight and fast alternative to the original Node.j
 
 ## 🚀 Getting Started
 
-### Prerequisites
-- [Go](https://go.dev/) 1.24+
-
-### Build the Backend
-```sh
-cd nodestatus-go
-go build -o nodestatus-go ./cmd/nodestatus-go
-```
+Prerequisite: Docker with Compose v2.
 
 ### Docker Deploy
 ```sh
-cp .env.example .env
-vim .env
-docker compose up -d --build
+mkdir -p ~/nodestatus-go
+cd ~/nodestatus-go
+curl -fsSLO https://raw.githubusercontent.com/Sheldonsix/nodestatus-go/main/docker-compose.yml
+
+cat > .env <<'EOF'
+WEB_PASSWORD=your-secure-password
+WEB_SECRET=your-random-secret
+BIND=127.0.0.1:35601:35601
+EOF
+
+docker compose pull
+docker compose up -d
 ```
-
-One-line install on a host with Docker and Git:
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/Sheldonsix/nodestatus-go/main/scripts/install.sh | sh
-```
-
-The installer clones the repo to `/opt/nodestatus-go` when it is not run from a local checkout, writes `.env`, and starts `docker compose up -d --build`.
 
 ### Client Agent
 `client-go` lives in `client-go/` as a separate Go module. Release assets are installed with:
@@ -57,15 +51,7 @@ sh /tmp/nodestatus-client-install.sh --dsn 'wss://node:password@example.com'
 - `Docker Release`: builds and pushes `ghcr.io/<owner>/<repo>` and `DOCKERHUB_USERNAME/nodestatus-go`; runs on `v*` tags or manually. Set `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` repository secrets first.
 - `Client Go Release`: builds Linux/OpenWrt client archives; runs on `v*` tags or manually.
 
-## ⚙️ Configuration & Run
-
-You can run the server using environment variables to configure its behavior. The defaults are designed to match the Node.js server where practical.
-
-```sh
-WEB_PASSWORD=your-secure-password ./nodestatus-go
-# or running via 'go run'
-WEB_PASSWORD=your-secure-password go run ./cmd/nodestatus-go
-```
+## ⚙️ Configuration
 
 ### Environment Variables
 | Variable | Default Value | Description |

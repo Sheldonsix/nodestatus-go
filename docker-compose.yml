@@ -1,6 +1,5 @@
 services:
   nodestatus:
-    build: .
     image: ${IMAGE:-ghcr.io/sheldonsix/nodestatus-go:latest}
     container_name: nodestatus-go
     restart: unless-stopped

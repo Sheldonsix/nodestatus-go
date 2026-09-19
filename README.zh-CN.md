@@ -20,29 +20,23 @@ NodeStatus Go 旨在提供一个资源占用更低、运行速度更快的 Node.
 
 ## 🚀 快速开始
 
-### 环境要求
-- [Go](https://go.dev/) 1.24+
-
-### 构建后端程序
-```sh
-cd nodestatus-go
-go build -o nodestatus-go ./cmd/nodestatus-go
-```
+前置要求：已安装 Docker 和 Docker Compose v2。
 
 ### Docker 部署
 ```sh
-cp .env.example .env
-vim .env
-docker compose up -d --build
+mkdir -p ~/nodestatus-go
+cd ~/nodestatus-go
+curl -fsSLO https://raw.githubusercontent.com/Sheldonsix/nodestatus-go/main/docker-compose.yml
+
+cat > .env <<'EOF'
+WEB_PASSWORD=your-secure-password
+WEB_SECRET=your-random-secret
+BIND=127.0.0.1:35601:35601
+EOF
+
+docker compose pull
+docker compose up -d
 ```
-
-已安装 Docker 和 Git 的主机可以一键部署：
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/Sheldonsix/nodestatus-go/main/scripts/install.sh | sh
-```
-
-安装脚本在非本地仓库目录执行时会克隆到 `/opt/nodestatus-go`，写入 `.env`，然后执行 `docker compose up -d --build`。
 
 ### 客户端探针
 `client-go` 位于 `client-go/`，作为独立 Go module 保留。Release 二进制可通过脚本安装：
@@ -57,15 +51,7 @@ sh /tmp/nodestatus-client-install.sh --dsn 'wss://node:password@example.com'
 - `Docker Release`：构建并推送 `ghcr.io/<owner>/<repo>` 和 `DOCKERHUB_USERNAME/nodestatus-go` 镜像，支持 `v*` tag 或手动触发。需要先配置仓库 secrets：`DOCKERHUB_USERNAME`、`DOCKERHUB_TOKEN`。
 - `Client Go Release`：构建 Linux/OpenWrt 客户端压缩包，支持 `v*` tag 或手动触发。
 
-## ⚙️ 运行与配置
-
-你可以通过环境变量来配置服务的运行参数。默认配置已尽量与原 Node 版本保持一致。
-
-```sh
-WEB_PASSWORD=你的安全密码 ./nodestatus-go
-# 或者通过 go run 直接运行
-WEB_PASSWORD=你的安全密码 go run ./cmd/nodestatus-go
-```
+## ⚙️ 配置
 
 ### 环境变量
 | 变量名 | 默认值 | 描述 |
