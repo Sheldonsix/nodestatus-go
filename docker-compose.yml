@@ -17,6 +17,9 @@ services:
       RECONNECT_TIMEOUT: ${RECONNECT_TIMEOUT:-120}
       TZ: ${TZ:-Asia/Shanghai}
     volumes:
-      - ./data:/data
+      - nodestatus-data:/data
     ports:
       - "${BIND:-127.0.0.1:35601:35601}"
+
+volumes:
+  nodestatus-data:

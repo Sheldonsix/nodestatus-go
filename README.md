@@ -38,6 +38,8 @@ docker compose pull
 docker compose up -d
 ```
 
+SQLite data is stored in the Docker volume `nodestatus-go_nodestatus-data`.
+
 ### Client Agent
 `client-go` lives in `client-go/` as a separate Go module. Release assets are installed with:
 

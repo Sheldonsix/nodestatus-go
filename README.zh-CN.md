@@ -38,6 +38,8 @@ docker compose pull
 docker compose up -d
 ```
 
+SQLite 数据会保存在 Docker volume `nodestatus-go_nodestatus-data` 中。
+
 ### 客户端探针
 `client-go` 位于 `client-go/`，作为独立 Go module 保留。Release 二进制可通过脚本安装：
 
