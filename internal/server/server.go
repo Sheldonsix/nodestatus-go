@@ -32,10 +32,13 @@ type Server struct {
 }
 
 type response struct {
-	Code int    `json:"code"`
-	Data any    `json:"data"`
-	Msg  string `json:"msg"`
+	Code      int    `json:"code"`
+	Data      any    `json:"data"`
+	Msg       string `json:"msg"`
+	ErrorCode string `json:"error_code,omitempty"`
 }
+
+const errorCodeServerUsernameExists = "server_username_exists"
 
 func New(st *store.Store, hub *status.Hub, cfg Config) http.Handler {
 	return &Server{store: st, hub: hub, cfg: cfg}
@@ -177,6 +180,19 @@ func (s *Server) handleAdmin(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func writeServerMutationError(w http.ResponseWriter, err error) {
+	if errors.Is(err, store.ErrServerUsernameExists) {
+		writeJSON(w, http.StatusConflict, response{
+			Code:      1,
+			Data:      nil,
+			Msg:       err.Error(),
+			ErrorCode: errorCodeServerUsernameExists,
+		})
+		return
+	}
+	writeJSON(w, http.StatusInternalServerError, fail(err.Error()))
+}
+
 func (s *Server) createServer(w http.ResponseWriter, r *http.Request) {
 	var raw map[string]json.RawMessage
 	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
@@ -195,7 +211,7 @@ func (s *Server) createServer(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if err := s.store.BulkCreateServers(r.Context(), inputs); err != nil {
-			writeJSON(w, http.StatusInternalServerError, fail(err.Error()))
+			writeServerMutationError(w, err)
 			return
 		}
 		_ = s.hub.RefreshAll(r.Context(), false)
@@ -209,7 +225,7 @@ func (s *Server) createServer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.store.CreateServer(r.Context(), input); err != nil {
-		writeJSON(w, http.StatusInternalServerError, fail(err.Error()))
+		writeServerMutationError(w, err)
 		return
 	}
 	_ = s.hub.RefreshServer(r.Context(), input.Username, false)
@@ -230,7 +246,7 @@ func (s *Server) updateServer(w http.ResponseWriter, r *http.Request) {
 	}
 	newUsername, disconnect, err := s.store.UpdateServer(r.Context(), body.Username, body.Data)
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, fail(err.Error()))
+		writeServerMutationError(w, err)
 		return
 	}
 	_ = s.hub.RefreshServer(r.Context(), body.Username, disconnect)

@@ -14,8 +14,19 @@ import (
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
-	_ "modernc.org/sqlite"
+	sqlite "modernc.org/sqlite"
+	sqlite3 "modernc.org/sqlite/lib"
 )
+
+var ErrServerUsernameExists = errors.New("server username already exists")
+
+func normalizeServerError(err error) error {
+	var sqliteErr *sqlite.Error
+	if errors.As(err, &sqliteErr) && sqliteErr.Code() == sqlite3.SQLITE_CONSTRAINT_UNIQUE {
+		return ErrServerUsernameExists
+	}
+	return err
+}
 
 type Store struct {
 	db    *sql.DB
@@ -207,7 +218,7 @@ func (s *Store) CreateServer(ctx context.Context, input ServerInput) error {
 	res, err := tx.ExecContext(ctx, `INSERT INTO servers (username, password, name, type, location, region, disabled, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, input.Username, hash, input.Name, input.Type, input.Location, input.Region, input.Disabled, now, now)
 	if err != nil {
-		return err
+		return normalizeServerError(err)
 	}
 	id, err := res.LastInsertId()
 	if err != nil {
@@ -250,7 +261,7 @@ func (s *Store) BulkCreateServers(ctx context.Context, inputs []ServerInput) err
 		res, err := tx.ExecContext(ctx, `INSERT INTO servers (username, password, name, type, location, region, disabled, created_at, updated_at)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, input.Username, hashes[i], input.Name, input.Type, input.Location, input.Region, input.Disabled, now, now)
 		if err != nil {
-			return err
+			return normalizeServerError(err)
 		}
 		id, err := res.LastInsertId()
 		if err != nil {
@@ -318,7 +329,7 @@ func (s *Store) UpdateServer(ctx context.Context, username string, data map[stri
 	args = append(args, dbTime(time.Now()), username)
 	res, err := s.db.ExecContext(ctx, `UPDATE servers SET `+strings.Join(fields, ", ")+` WHERE username = ?`, args...)
 	if err != nil {
-		return "", false, err
+		return "", false, normalizeServerError(err)
 	}
 	if rows, err := res.RowsAffected(); err == nil && rows == 0 {
 		return "", false, sql.ErrNoRows

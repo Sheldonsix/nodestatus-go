@@ -108,3 +108,69 @@ func TestAdminAndWebSockets(t *testing.T) {
 	}
 	t.Fatal("public websocket did not receive updated status")
 }
+
+func TestCreateServerDuplicateUsername(t *testing.T) {
+	st, err := store.Open(filepath.Join(t.TempDir(), "db.sqlite"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+
+	hub, err := status.NewHub(st, status.Options{
+		Interval:         time.Hour,
+		ReconnectTimeout: time.Hour,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer hub.Close()
+
+	handler := NewTestHandler(st, hub, Config{})
+
+	token, err := CreateToken("admin", "secret", time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	create := func() *httptest.ResponseRecorder {
+		req := httptest.NewRequest(
+			http.MethodPost,
+			"/api/admin/servers",
+			strings.NewReader(`{
+                                "username": "node",
+                                "password": "secret",
+                                "name": "Node",
+                                "type": "kvm",
+                                "location": "US",
+                                "region": "US"
+                        }`),
+		)
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		return rec
+	}
+
+	if got := create(); got.Code != http.StatusOK {
+		t.Fatalf("first create status = %d, body = %s", got.Code, got.Body.String())
+	}
+
+	got := create()
+	if got.Code != http.StatusConflict {
+		t.Fatalf("duplicate create status = %d, body = %s", got.Code, got.Body.String())
+	}
+
+	var body response
+	if err := json.NewDecoder(got.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+	if body.Code != 1 || body.Msg != store.ErrServerUsernameExists.Error() {
+		t.Fatalf("unexpected response: %#v", body)
+	}
+	if body.Code != 1 ||
+		body.ErrorCode != errorCodeServerUsernameExists ||
+		body.Msg != store.ErrServerUsernameExists.Error() {
+		t.Fatalf("unexpected response: %#v", body)
+	}
+}
