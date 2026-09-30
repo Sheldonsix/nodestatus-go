@@ -15,6 +15,15 @@ INTERVAL=1.5
 BIN=/usr/local/bin/nodestatus-client
 RUNNER=/usr/local/bin/nodestatus-client-go-run
 CONFIG_DIR=/etc/nodestatus-client-go
+SYSTEMD_DIR=/etc/systemd/system
+
+if [ -f /etc/os-release ] && grep -qi coreelec /etc/os-release; then
+  CONFIG_DIR=/storage/.config/nodestatus-client-go
+  BIN=$CONFIG_DIR/nodestatus-client
+  RUNNER=$CONFIG_DIR/run
+  SYSTEMD_DIR=/storage/.config/system.d
+fi
+
 CONFIG_FILE=$CONFIG_DIR/client.env
 
 die() {
@@ -188,17 +197,17 @@ write_config() {
   } > "$CONFIG_FILE"
   chmod 0600 "$CONFIG_FILE"
 
-  cat > "$RUNNER" <<'EOF'
+  cat > "$RUNNER" <<EOF
 #!/bin/sh
 set -eu
 
-. /etc/nodestatus-client-go/client.env
+. "$CONFIG_FILE"
 
-if [ -n "${NODESTATUS_DSN:-}" ]; then
-  exec /usr/local/bin/nodestatus-client -dsn "$NODESTATUS_DSN" -custom "${NODESTATUS_CUSTOM:-complete-go-client}" -interval "${NODESTATUS_INTERVAL:-1.5}"
+if [ -n "\${NODESTATUS_DSN:-}" ]; then
+  exec "$BIN" -dsn "\$NODESTATUS_DSN" -custom "\${NODESTATUS_CUSTOM:-complete-go-client}" -interval "\${NODESTATUS_INTERVAL:-1.5}"
 fi
 
-exec /usr/local/bin/nodestatus-client -server "$NODESTATUS_SERVER" -username "$NODESTATUS_USERNAME" -password "$NODESTATUS_PASSWORD" -custom "${NODESTATUS_CUSTOM:-complete-go-client}" -interval "${NODESTATUS_INTERVAL:-1.5}"
+exec "$BIN" -server "\$NODESTATUS_SERVER" -username "\$NODESTATUS_USERNAME" -password "\$NODESTATUS_PASSWORD" -custom "\${NODESTATUS_CUSTOM:-complete-go-client}" -interval "\${NODESTATUS_INTERVAL:-1.5}"
 EOF
   chmod 0755 "$RUNNER"
 }
@@ -216,7 +225,8 @@ disable_old_service() {
 }
 
 install_systemd() {
-  cat > "/etc/systemd/system/$SERVICE.service" <<EOF
+  mkdir -p "$SYSTEMD_DIR"
+  cat > "$SYSTEMD_DIR/$SERVICE.service" <<EOF
 [Unit]
 Description=NodeStatus Go Client
 After=network-online.target
