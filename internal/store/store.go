@@ -18,7 +18,11 @@ import (
 	sqlite3 "modernc.org/sqlite/lib"
 )
 
-var ErrServerUsernameExists = errors.New("server username already exists")
+var (
+	ErrServerUsernameExists   = errors.New("server username already exists")
+	ErrServerNotEmpty         = errors.New("target already contains servers")
+	ErrInvalidServerMigration = errors.New("invalid server migration")
+)
 
 func normalizeServerError(err error) error {
 	var sqliteErr *sqlite.Error
@@ -54,6 +58,17 @@ type ServerInput struct {
 	Location string `json:"location"`
 	Region   string `json:"region"`
 	Disabled bool   `json:"disabled"`
+}
+
+type ServerMigration struct {
+	Username     string `json:"username"`
+	PasswordHash string `json:"password_hash"`
+	Name         string `json:"name"`
+	Type         string `json:"type"`
+	Location     string `json:"location"`
+	Region       string `json:"region"`
+	Disabled     bool   `json:"disabled"`
+	Order        int    `json:"order"`
 }
 
 type Event struct {
@@ -364,6 +379,120 @@ func (s *Store) DeleteServer(ctx context.Context, username string) error {
 	}
 	s.setOrderCache(ids)
 	return nil
+}
+
+func (s *Store) ExportServers(ctx context.Context) ([]ServerMigration, error) {
+	servers, err := s.ListServers(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]ServerMigration, len(servers))
+	for i, server := range servers {
+		result[i] = ServerMigration{
+			Username:     server.Username,
+			PasswordHash: server.Password,
+			Name:         server.Name,
+			Type:         server.Type,
+			Location:     server.Location,
+			Region:       server.Region,
+			Disabled:     server.Disabled,
+			Order:        server.Order,
+		}
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Order > result[j].Order
+	})
+	return result, nil
+}
+
+func (s *Store) ImportServers(ctx context.Context, inputs []ServerMigration) error {
+	if len(inputs) == 0 {
+		return ErrInvalidServerMigration
+	}
+
+	usernames := map[string]struct{}{}
+	orders := map[int]struct{}{}
+
+	for _, input := range inputs {
+		if strings.TrimSpace(input.Username) == "" || strings.TrimSpace(input.Name) == "" || strings.TrimSpace(input.Type) == "" || strings.TrimSpace(input.Location) == "" || strings.TrimSpace(input.Region) == "" || strings.TrimSpace(input.PasswordHash) == "" || input.Order <= 0 {
+			return ErrInvalidServerMigration
+		}
+		if cost, err := bcrypt.Cost([]byte(input.PasswordHash)); err != nil || cost > 14 {
+			return ErrInvalidServerMigration
+		}
+		if _, exists := usernames[input.Username]; exists {
+			return ErrInvalidServerMigration
+		}
+		usernames[input.Username] = struct{}{}
+		if _, exists := orders[input.Order]; exists {
+			return ErrInvalidServerMigration
+		}
+		orders[input.Order] = struct{}{}
+	}
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	var existing int
+	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM servers`).Scan(&existing); err != nil {
+		return err
+	}
+	if existing != 0 {
+		return ErrServerNotEmpty
+	}
+
+	type orderedServer struct {
+		id    int
+		order int
+	}
+
+	inserted := make([]orderedServer, 0, len(inputs))
+	now := dbTime(time.Now())
+	for _, input := range inputs {
+		result, err := tx.ExecContext(
+			ctx,
+			`INSERT INTO servers (username, password, name, type, location, region, disabled, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			input.Username, input.PasswordHash, input.Name, input.Type, input.Location, input.Region, input.Disabled, now, now,
+		)
+		if err != nil {
+			return normalizeServerError(err)
+		}
+
+		id, err := result.LastInsertId()
+		if err != nil {
+			return err
+		}
+
+		inserted = append(inserted, orderedServer{
+			id:    int(id),
+			order: input.Order,
+		})
+	}
+
+	sort.Slice(inserted, func(i, j int) bool {
+		return inserted[i].order < inserted[j].order
+	})
+
+	ids := make([]int, len(inserted))
+	for i, server := range inserted {
+		ids[i] = server.id
+	}
+
+	if err := setOrder(ctx, tx, ids); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	s.setOrderCache(ids)
+	return nil
+
 }
 
 func (s *Store) UpdateOrder(ctx context.Context, ids []int) error {

@@ -38,7 +38,25 @@ type response struct {
 	ErrorCode string `json:"error_code,omitempty"`
 }
 
-const errorCodeServerUsernameExists = "server_username_exists"
+type serverMigrationFile struct {
+	Format     string                  `json:"format"`
+	Version    int                     `json:"version"`
+	ExportedAt string                  `json:"exported_at"`
+	Nodes      []store.ServerMigration `json:"nodes"`
+}
+
+const (
+	errorCodeServerUsernameExists    = "server_username_exists"
+	errorCodeMigrationTargetNotEmpty = "migration_target_not_empty"
+	errorCodeInvalidMigrationFile    = "invalid_migration_file"
+)
+
+const (
+	serverMigrationFormat   = "nodestatus-nodes"
+	serverMigrationVersion  = 1
+	serverMigrationMaxSize  = 2 << 20
+	serverMigrationMaxNodes = 1000
+)
 
 func New(st *store.Store, hub *status.Hub, cfg Config) http.Handler {
 	return &Server{store: st, hub: hub, cfg: cfg}
@@ -175,6 +193,10 @@ func (s *Server) handleAdmin(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		writeJSON(w, http.StatusOK, ok(nil, "ok"))
+	case r.URL.Path == "/api/admin/servers/export" && r.Method == http.MethodGet:
+		s.exportServers(w, r)
+	case r.URL.Path == "/api/admin/servers/import" && r.Method == http.MethodPost:
+		s.importServers(w, r)
 	default:
 		http.NotFound(w, r)
 	}
@@ -280,6 +302,73 @@ func (s *Server) authorized(r *http.Request) bool {
 	}
 	username, err := VerifyToken(strings.TrimSpace(parts[1]), s.cfg.WebSecret)
 	return err == nil && username == s.cfg.WebUsername
+}
+
+func (s *Server) exportServers(w http.ResponseWriter, r *http.Request) {
+	nodes, err := s.store.ExportServers(r.Context())
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, fail(err.Error()))
+		return
+	}
+
+	w.Header().Set("Cache-Control", "no-store")
+
+	writeJSON(w, http.StatusOK, ok(serverMigrationFile{
+		Format:     serverMigrationFormat,
+		Version:    serverMigrationVersion,
+		ExportedAt: time.Now().Format(time.RFC3339),
+		Nodes:      nodes,
+	}, "ok"))
+}
+
+func (s *Server) importServers(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, serverMigrationMaxSize)
+
+	var file serverMigrationFile
+	if err := json.NewDecoder(r.Body).Decode(&file); err != nil {
+		writeJSON(w, http.StatusBadRequest, response{
+			Code:      1,
+			Data:      nil,
+			Msg:       "Invalid migration file",
+			ErrorCode: errorCodeInvalidMigrationFile,
+		})
+		return
+	}
+
+	if file.Format != serverMigrationFormat || file.Version != serverMigrationVersion || len(file.Nodes) == 0 || len(file.Nodes) > serverMigrationMaxNodes {
+		writeJSON(w, http.StatusBadRequest, response{
+			Code:      1,
+			Data:      nil,
+			Msg:       "Invalid migration file",
+			ErrorCode: errorCodeInvalidMigrationFile,
+		})
+		return
+	}
+
+	if err := s.store.ImportServers(r.Context(), file.Nodes); err != nil {
+		switch {
+		case errors.Is(err, store.ErrServerNotEmpty):
+			writeJSON(w, http.StatusConflict, response{
+				Code:      1,
+				Data:      nil,
+				Msg:       err.Error(),
+				ErrorCode: errorCodeMigrationTargetNotEmpty,
+			})
+		case errors.Is(err, store.ErrInvalidServerMigration):
+			writeJSON(w, http.StatusBadRequest, response{
+				Code:      1,
+				Data:      nil,
+				Msg:       err.Error(),
+				ErrorCode: errorCodeInvalidMigrationFile,
+			})
+		default:
+			writeJSON(w, http.StatusInternalServerError, fail(err.Error()))
+		}
+		return
+	}
+
+	_ = s.hub.RefreshAll(r.Context(), false)
+	writeJSON(w, http.StatusOK, ok(len(file.Nodes), "ok"))
 }
 
 func CreateToken(username, secret string, now time.Time) (string, error) {
