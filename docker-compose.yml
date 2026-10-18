@@ -8,7 +8,7 @@ services:
       DATABASE: /data/db.sqlite
       WEB_USERNAME: ${WEB_USERNAME:-admin}
       WEB_PASSWORD: ${WEB_PASSWORD:?set WEB_PASSWORD in .env}
-      WEB_SECRET: ${WEB_SECRET:-node-secret}
+      WEB_SECRET: ${WEB_SECRET:?set WEB_SECRET in .env}
       WEB_TITLE: ${WEB_TITLE:-Server Status}
       WEB_SUBTITLE: ${WEB_SUBTITLE:-Servers' Probes Set up with NodeStatus}
       WEB_HEADTITLE: ${WEB_HEADTITLE:-NodeStatus}
@@ -19,7 +19,7 @@ services:
     volumes:
       - nodestatus-data:/data
     ports:
-      - "${BIND:-127.0.0.1:35601:35601}"
+      - '${BIND:-127.0.0.1:35601:35601}'
 
 volumes:
   nodestatus-data:

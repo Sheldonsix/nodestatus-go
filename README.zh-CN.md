@@ -28,11 +28,14 @@ mkdir -p ~/nodestatus-go
 cd ~/nodestatus-go
 curl -fsSLO https://raw.githubusercontent.com/Sheldonsix/nodestatus-go/main/docker-compose.yml
 
-cat > .env <<'EOF'
-WEB_PASSWORD=your-secure-password
-WEB_SECRET=your-random-secret
+web_password="$(openssl rand -hex 16)"
+web_secret="$(openssl rand -hex 32)"
+cat > .env <<EOF
+WEB_PASSWORD=${web_password}
+WEB_SECRET=${web_secret}
 BIND=127.0.0.1:35601:35601
 EOF
+printf '管理员密码：%s\n' "$web_password"
 
 docker compose pull
 docker compose up -d
@@ -61,8 +64,8 @@ sh /tmp/nodestatus-client-install.sh --dsn 'wss://node:password@example.com'
 | `PORT` | `35601` | 服务监听的端口号。 |
 | `DATABASE` | `$HOME/.nodestatus/db.sqlite` | SQLite 数据库路径 (支持普通路径或 `file:` URL)。 |
 | `WEB_USERNAME` | `admin` | 管理面板的登录用户名。 |
-| `WEB_PASSWORD` | *(必填)* | 管理面板的登录密码。 |
-| `WEB_SECRET` | `node-secret` | JWT 或 Session 的加密密钥。 |
+| `WEB_PASSWORD` | *(必填)* | 管理面板的登录密码；可通过 `openssl rand -hex 16` 生成。 |
+| `WEB_SECRET` | *(必填)* | 用于签名 JWT 的随机密钥；可通过 `openssl rand -hex 32` 生成。 |
 | `INTERVAL` | `1500` | 前端数据刷新间隔 (毫秒)。 |
 | `PING_INTERVAL` | `30` | WebSocket Ping 间隔 (秒)。 |
 | `RECONNECT_TIMEOUT`| `120` | 探针断线重连超时时间 (秒)。 |

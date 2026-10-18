@@ -28,11 +28,14 @@ mkdir -p ~/nodestatus-go
 cd ~/nodestatus-go
 curl -fsSLO https://raw.githubusercontent.com/Sheldonsix/nodestatus-go/main/docker-compose.yml
 
-cat > .env <<'EOF'
-WEB_PASSWORD=your-secure-password
-WEB_SECRET=your-random-secret
+web_password="$(openssl rand -hex 16)"
+web_secret="$(openssl rand -hex 32)"
+cat > .env <<EOF
+WEB_PASSWORD=${web_password}
+WEB_SECRET=${web_secret}
 BIND=127.0.0.1:35601:35601
 EOF
+printf 'Admin password: %s\n' "$web_password"
 
 docker compose pull
 docker compose up -d
@@ -61,8 +64,8 @@ sh /tmp/nodestatus-client-install.sh --dsn 'wss://node:password@example.com'
 | `PORT` | `35601` | The port the server listens on. |
 | `DATABASE` | `$HOME/.nodestatus/db.sqlite` | Path to the SQLite DB (can be a plain path or a `file:` URL). |
 | `WEB_USERNAME` | `admin` | Admin dashboard username. |
-| `WEB_PASSWORD` | *(required)* | Admin dashboard password. |
-| `WEB_SECRET` | `node-secret` | Secret key for JWT/session encryption. |
+| `WEB_PASSWORD` | *(required)* | Admin dashboard password; generate one with `openssl rand -hex 16`. |
+| `WEB_SECRET` | *(required)* | Random secret used to sign JWTs; generate one with `openssl rand -hex 32`. |
 | `INTERVAL` | `1500` | Data update interval in milliseconds. |
 | `PING_INTERVAL` | `30` | WebSocket ping interval in seconds. |
 | `RECONNECT_TIMEOUT`| `120` | Agent reconnect timeout in seconds. |

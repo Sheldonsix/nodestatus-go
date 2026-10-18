@@ -22,7 +22,6 @@ EXPOSE 35601
 
 ENV PORT=35601 \
   DATABASE=/data/db.sqlite \
-  WEB_USERNAME=admin \
-  WEB_SECRET=node-secret
+  WEB_USERNAME=admin
 
 ENTRYPOINT ["/usr/local/bin/nodestatus-go"]

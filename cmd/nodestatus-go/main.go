@@ -26,14 +26,18 @@ func main() {
 	database := flag.String("database", envString("DATABASE", defaultDatabase()), "SQLite database path or file: URL")
 	webUsername := flag.String("web-username", envString("WEB_USERNAME", "admin"), "admin username")
 	webPassword := flag.String("web-password", envString("WEB_PASSWORD", ""), "admin password")
-	webSecret := flag.String("web-secret", envString("WEB_SECRET", "node-secret"), "JWT secret")
+	webSecret := flag.String("web-secret", envString("WEB_SECRET", ""), "JWT secret")
 	webTitle := flag.String("web-title", envString("WEB_TITLE", "Server Status"), "public title")
 	webSubtitle := flag.String("web-subtitle", envString("WEB_SUBTITLE", "Servers' Probes Set up with NodeStatus"), "public subtitle")
 	webHeadtitle := flag.String("web-headtitle", envString("WEB_HEADTITLE", "NodeStatus"), "public head title")
 	flag.Parse()
 
-	if *webPassword == "" {
-		log.Fatal("WEB_PASSWORD or --web-password is required")
+	if !validWebPassword(*webPassword) {
+		log.Fatal("WEB_PASSWORD or --web-password is required and must not use an example value")
+	}
+
+	if *webSecret == "" || *webSecret == "node-secret" || len(*webSecret) < 32 {
+		log.Fatal("WEB_SECRET or --web-secret is required and must not be node-secret or less than 32 characters")
 	}
 
 	st, err := store.Open(*database)
@@ -87,6 +91,10 @@ func envString(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func validWebPassword(password string) bool {
+	return password != "" && password != "change-me" && password != "your-secure-password"
 }
 
 func envInt(key string, fallback int) int {
