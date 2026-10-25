@@ -3,6 +3,7 @@ package status
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net"
 	"net/http"
 	"sort"
@@ -20,6 +21,7 @@ const (
 	maxHistoryPoints      = 1800
 	historySampleInterval = 2 * time.Second
 	historyFlushInterval  = 5 * time.Minute
+	historyRetention      = 7 * 24 * time.Hour
 )
 
 type Options struct {
@@ -98,6 +100,7 @@ func NewHub(st *store.Store, opts Options) (*Hub, error) {
 	if err := h.RefreshAll(context.Background(), false); err != nil {
 		return nil, err
 	}
+	h.pruneHistory()
 	go h.loop()
 	return h, nil
 }
@@ -432,7 +435,16 @@ func (h *Hub) FlushHistory() {
 		delete(h.aggregate, username)
 	}
 	h.mu.Unlock()
-	_ = h.store.CreateHistories(context.Background(), inputs)
+	if err := h.store.CreateHistories(context.Background(), inputs); err != nil {
+		log.Printf("flush history: %v", err)
+	}
+	h.pruneHistory()
+}
+
+func (h *Hub) pruneHistory() {
+	if err := h.store.DeleteHistoriesBefore(context.Background(), time.Now().Add(-historyRetention)); err != nil {
+		log.Printf("prune history: %v", err)
+	}
 }
 
 func (h *Hub) pushHistoryLocked(username string, point store.BandwidthPoint) {

@@ -43,6 +43,8 @@ docker compose up -d
 
 SQLite data is stored in the Docker volume `nodestatus-go_nodestatus-data`.
 
+History is retained for the last 7 days. Older history is permanently deleted at server startup and every 5 minutes, even when no agents are connected. Cleanup failures are logged and retried at the next interval. Deleted space is reused by SQLite; cleanup does not automatically shrink the database file.
+
 ### Client Agent
 `client-go` lives in `client-go/` as a separate Go module. Release assets are installed with:
 

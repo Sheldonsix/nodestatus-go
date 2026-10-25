@@ -43,6 +43,8 @@ docker compose up -d
 
 SQLite 数据会保存在 Docker volume `nodestatus-go_nodestatus-data` 中。
 
+历史记录仅保留近 7 天。服务启动时及之后每 5 分钟会永久删除过期历史，即使没有探针连接也会清理。清理失败会记录日志，并在下个周期重试。删除后的空间由 SQLite 复用，数据库文件不会自动缩小。
+
 ### 客户端探针
 `client-go` 位于 `client-go/`，作为独立 Go module 保留。Release 二进制可通过脚本安装：
 

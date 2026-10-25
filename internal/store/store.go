@@ -562,6 +562,14 @@ func (s *Store) DeleteAllEvents(ctx context.Context) error {
 	return err
 }
 
+func (s *Store) DeleteHistoriesBefore(ctx context.Context, before time.Time) error {
+	// Legacy databases can contain either date strings or Unix milliseconds.
+	_, err := s.db.ExecContext(ctx, `DELETE FROM server_histories WHERE CASE
+		WHEN typeof(created_at) IN ('integer', 'real') THEN created_at < ?
+		ELSE julianday(created_at) < julianday(?) END`, before.UnixMilli(), dbTime(before))
+	return err
+}
+
 func (s *Store) CreateHistories(ctx context.Context, items []HistoryInput) error {
 	if len(items) == 0 {
 		return nil
